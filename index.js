@@ -29,7 +29,7 @@ const gameboard = {
     pendingConnectionPathPoints: null,
     remainingSeconds: 0,
     stageNo: 0,
-    _startingSeconds: 100,
+    _startingSeconds: 400,
 
     addPointToPendingConnection(row, column) {
         this.pendingConnectionPathPoints.push(this.getLocationCenterPoint(row, column));
