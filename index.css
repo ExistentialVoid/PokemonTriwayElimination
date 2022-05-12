@@ -1,0 +1,16 @@
+body {
+    background-color: hsla(230, 50%, 20%, 100%);
+}
+
+canvas {
+    position: absolute;
+}
+
+#backdrop {
+    z-index: -5;
+    background-color: hsl(210, 60%, 50%);
+}
+
+#overlay {
+    pointer-events: none;
+}
