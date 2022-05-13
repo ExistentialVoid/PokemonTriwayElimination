@@ -24,18 +24,31 @@ let tiles = new Array(0);
 const gameboard = {
     colCnt: 16,
     rowCnt: 10,
-    imgPairs: 4,
+    imgPairs: 2,
     padding: 60,
     pendingConnectionPathPoints: null,
     remainingSeconds: 0,
     stageNo: 0,
-    _startingSeconds: 600,
+    _startingSeconds: 240,
 
     addPointToPendingConnection(row, column) {
         this.pendingConnectionPathPoints.push(this.getLocationCenterPoint(row, column));
     },
     async advanceStage() {
         this.stageNo++;
+        stageMechanics.clearPairInsertionInterval();
+        stageMechanics.clearPairSwapInterval();
+        if ((this.stageNo >= 5 && this.stageNo < 9) ||
+            (this.stageNo >= 17 && this.stageNo < 21)) {
+                stageMechanics.setPairSwapInterval();
+        } else if ((this.stageNo >= 9 && this.stageNo < 13) || 
+            (this.stageNo >= 21 && this.stageNo <= 24)) {
+                stageMechanics.setPairInsertionInterval();
+        }
+
+        if (this.stageNo >= 13 && this.stageNo <= 24) {
+            this.imgPairs = 1;
+        }
 
         // create total num of tiles with randomly assigned images
         tiles = [];
@@ -224,7 +237,7 @@ const gameboard = {
         return !obstructingTiles.length;
     },
     imgCount() {
-        return this.colCnt * this.rowCnt / this.imgPairs;
+        return this.colCnt * this.rowCnt / (this.imgPairs * 2);
     },
     onClick(ev) {
         if (!ev) ev = window.event;
@@ -244,7 +257,7 @@ const gameboard = {
         // return an order list of images by index
         let imgs = [];
         for (let i = 0; i < this.imgCount(); i++) {
-            for (let j = 0; j < this.imgPairs; j++) {
+            for (let j = 0; j < (this.imgPairs * 2); j++) {
                 imgs.push(`./Images/${imageURLs[i]}`);
             }
         }
@@ -319,29 +332,35 @@ const stageMechanics = {
         24        orig or bound  1        false          false
     */
     executingDualFalling: false,
+    _pairInsertionInterval() {},
+    _pairSwapInterval() {},
 
     async applyMechanics() {
         if (gameboard.stageNo % 4 === 0) {
             gravity = {x: 1.0, y: 1.0};
             executingDualFalling = true;
             tiles.forEach(tile => {
-                stageMechanics.prepareFall(tile, true, false);
+                this.prepareFall(tile, true, false);
             });
             fallAnimation();
             while (tiles.some(t => t.toggleFall)){
                 await delay(50);
             }
             tiles.forEach(tile => {
-                stageMechanics.prepareFall(tile, false, true);
+                this.prepareFall(tile, false, true);
             });
             executingDualFalling = false;
         } else {
             gravity = {x: 0.5, y: 0.5};
-            tiles.forEach(tile => {
-                stageMechanics.prepareFall(tile, true, true);
-            });
+            tiles.forEach(tile => this.prepareFall(tile, true, true));
         }
         fallAnimation();
+    },
+    clearPairInsertionInterval() {
+        clearInterval(this._pairInsertionInterval);
+    },
+    clearPairSwapInterval() {
+        clearInterval(this._pairSwapInterval);
     },
     getStageNo() {
         return gameboard.stageNo;
@@ -449,6 +468,101 @@ const stageMechanics = {
         }
 
         tile.restPosition = gameboard.convertPosition(targetRow, targetCol);
+    },
+    setPairInsertionInterval(time = 20000) {
+        this._pairInsertionInterval = setInterval(() => {
+            // add pair
+            if (tiles.length >= gameboard.rowCnt * gameboard.colCnt) return;
+            while (this.executingDualFalling) delay(1000);
+
+            let randImgIndex = parseInt(Math.random() * 40);
+            for (let i = 0; i < 2; i++) {
+                let randRow = parseInt(Math.random() * gameboard.rowCnt);
+                let randCol = parseInt(Math.random() * gameboard.colCnt);
+                let row = -1;
+                let col = -1;
+                for (let r = randRow; r < gameboard.rowCnt; r++) {
+                    for (let c = randCol; c < gameboard.colCnt; c++) {
+                        if (!tiles.some(t => t.row() === r && t.col() === c)) {
+                            row = r;
+                            col = c;
+                            break;
+                        }
+                    }
+                    if (row !== -1 && col !== -1)  break;
+                    for (let c = randCol; c >= 0; c--) {
+                        if (!tiles.some(t => t.row() === r && t.col() === c)) {
+                            row = r;
+                            col = c;
+                            break;
+                        }
+                    }
+                    if (row !== -1 && col !== -1) break;
+                }
+                if (row === -1 || col === -1) {
+                    for (let r = randRow; r >= 0; r--) {
+                        for (let c = randCol; c < gameboard.colCnt; c++) {
+                            if (!tiles.some(t => t.row() === r && t.col() === c)) {
+                                row = r;
+                                col = c;
+                                break;
+                            }
+                        }
+                        if (row !== -1 && col !== -1)  break;
+                        for (let c = randCol; c >= 0; c--) {
+                            if (!tiles.some(t => t.row() === r && t.col() === c)) {
+                                row = r;
+                                col = c;
+                                break;
+                            }
+                        }
+                        if (row !== -1 && col !== -1) break;
+                    }
+                }
+
+                tiles.push(new Tile({
+                    img: `./Images/${imageURLs[randImgIndex]}`,
+                    position: gameboard.convertPosition(row, col),
+                    size: {
+                        x: (board.width - 2 * gameboard.padding) / gameboard.colCnt,
+                        y: (board.height - 2 * gameboard.padding) / gameboard.rowCnt
+                    }
+                }));
+            }
+
+            tiles.forEach(tile => this.prepareFall(tile, true, true));
+            fallAnimation();
+            gameboard.remainingSeconds -= gameboard.proportionalTimeGain();
+        }, time);
+    },
+    setPairSwapInterval(time = 10000) {
+        this._pairSwapInterval = setInterval(() => {
+            let swappedTiles = []
+            for (let i = 0; i < parseInt(tiles.length / 10); i++) {
+                let rand = parseInt(Math.random() * tiles.length);
+                let tile1 = tiles[rand];
+                while (swappedTiles.indexOf(tile1) !== -1) {
+                    rand = parseInt(Math.random() * tiles.length);
+                    tile1 = tiles[rand];
+                }
+                swappedTiles.push(tile1);
+                let tile2 = tile1
+                while (swappedTiles.indexOf(tile2) !== - 1 ||
+                    tile2.img.src.toString() === tile1.img.src.toString()) {
+                    rand = parseInt(Math.random() * tiles.length);
+                    tile2 = tiles[rand];
+                }
+                swappedTiles.push(tile2);
+    
+                const img1 = tile1.img;
+                const img2 = tile2.img;
+                tile1.img = img2;
+                tile2.img = img1;
+    
+                tile1.draw();
+                tile2.draw();
+            }
+        }, time);
     }
 }
 const imageURLs = [
