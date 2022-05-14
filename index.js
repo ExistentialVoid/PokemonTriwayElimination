@@ -5,8 +5,8 @@ const oc = overlay.getContext('2d');
 const backdrop = document.getElementById('backdrop');
 const bc = overlay.getContext('2d');
 
-board.width = 1440;
-board.height = 860;
+board.width = 1400;
+board.height = 840;
 overlay.width = board.width;
 overlay.height = board.height;
 backdrop.width = board.width;
@@ -21,6 +21,9 @@ let gravity = {x: 0.5, y: 0.5};
 let selectedTile = null;
 let tiles = new Array(0);
 
+const settings = {
+    time: 360
+}
 const gameboard = {
     colCnt: 16,
     rowCnt: 10,
@@ -29,7 +32,6 @@ const gameboard = {
     pendingConnectionPathPoints: null,
     remainingSeconds: 0,
     stageNo: 0,
-    _startingSeconds: 240,
 
     addPointToPendingConnection(row, column) {
         this.pendingConnectionPathPoints.push(this.getLocationCenterPoint(row, column));
@@ -69,7 +71,7 @@ const gameboard = {
         }
 
         // reset time
-        this.remainingSeconds = this._startingSeconds;
+        this.remainingSeconds = settings.time;
         await delay(250);
         drawAnimation(0);
     },
@@ -138,7 +140,7 @@ const gameboard = {
         }
         oc.stroke();
 
-        await delay(1600);
+        await delay(800);
 
         oc.clearRect(0,0, board.width, board.height);
     },
@@ -242,11 +244,13 @@ const gameboard = {
     onClick(ev) {
         if (!ev) ev = window.event;
 
+        const clickY = ev.clientY - board.offsetTop;
+        const clickX = ev.clientX - board.offsetLeft;
         let tile = tiles.find(t => 
-            t.position.x <= ev.clientX && 
-            t.position.x + t.width >= ev.clientX &&
-            t.position.y <= ev.clientY &&
-            t.position.y + t.height >= ev.clientY
+            t.position.x <= clickX && 
+            t.position.x + t.width >= clickX &&
+            t.position.y <= clickY &&
+            t.position.y + t.height >= clickY
         );
         if (tile) {
             tile.click();
@@ -264,7 +268,7 @@ const gameboard = {
         return imgs;
     },
     proportionalTime() {
-        return this.remainingSeconds / this._startingSeconds;
+        return this.remainingSeconds / settings.time;
     },
     proportionalTimeGain() {
         // Gain between 1 and 5 seconds is linearly proportional to remaining time
@@ -288,8 +292,8 @@ const gameboard = {
         tiles.forEach(t => t.draw());
     },
     reset() {
+        this.stageNo = 0;
         this.advanceStage();
-        this.stageNo = 1;
     },
     revertPosition(position) {
         const c = (position.x - this.padding) * this.colCnt / (board.width - 2 * this.padding);
@@ -305,32 +309,8 @@ const gameboard = {
     }
 }
 const stageMechanics = {
-    /*  Stage     Flow           Pairs    Inject pair    Swap tiles
-        1         None           2        false          false
-        2         down           2        false          false
-        3         left           2        false          false
-        4         origin         2        false          false
-        5         None           2        false          false
-        6         down           2        false          false
-        7         right          2        false          false
-        8         origin         2        false          false
-        9         None           2        false          false
-        10        up             2        false          false
-        11        left           2        false          false
-        12        origin         2        false          false
-        13        None           1        false          false
-        14        up             1        false          false
-        15        right          1        false          false
-        16        boundary       1        false          false
-        17        None           1        false          false
-        18        up or down     1        false          false
-        19        right or left  1        false          false
-        20        boundary       1        false          false
-        21        None           1        false          false
-        22        up or down     1        false          false
-        23        right or left  1        false          false
-        24        orig or bound  1        false          false
-    */
+    // View rules in stageMechanics.txt
+
     executingDualFalling: false,
     _pairInsertionInterval() {},
     _pairSwapInterval() {},
@@ -972,7 +952,11 @@ function fallAnimation() {
 function timerTick() {
     gameboard.remainingSeconds -= 2;
     backdrop.style.opacity = `${gameboard.proportionalTime() * 100}%`;
-    if (backdrop.style.opacity <= 0) {
+    if (gameboard.remainingSeconds <= 0) {
+        if (gameboard.canPairAny()) {
+            gameboard.drawConnection();
+            delay(800);
+        }
         backdrop.style.opacity = '100%';
         gameboard.reset();
     }

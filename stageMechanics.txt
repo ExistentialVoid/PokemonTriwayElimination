@@ -1,0 +1,25 @@
+Stage     Flow           Pairs    Inject pair    Swap tiles
+1         None           2        false          false
+2         down           2        false          false
+3         left           2        false          false
+4         origin         2        false          false
+5         None           2        false          true
+6         down           2        false          true
+7         right          2        false          true
+8         origin         2        false          true
+9         None           2        true          false
+10        up             2        true          false
+11        left           2        true          false
+12        origin         2        true          false
+13        None           1        false          false
+14        up             1        false          false
+15        right          1        false          false
+16        boundary       1        false          false
+17        None           1        false          true
+18        up or down     1        false          true
+19        right or left  1        false          true
+20        boundary       1        false          true
+21        None           1        true          false
+22        up or down     1        true          false
+23        right or left  1        true          false
+24        orig or bound  1        true          false
