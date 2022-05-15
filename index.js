@@ -22,7 +22,7 @@ let selectedTile = null;
 let tiles = new Array(0);
 
 const settings = {
-    time: 360
+    time: 480
 }
 const gameboard = {
     colCnt: 16,
@@ -244,8 +244,9 @@ const gameboard = {
     onClick(ev) {
         if (!ev) ev = window.event;
 
-        const clickY = ev.clientY - board.offsetTop;
-        const clickX = ev.clientX - board.offsetLeft;
+        const panel = document.getElementsByClassName('panel')[0];
+        const clickY = ev.clientY + window.scrollY - board.offsetTop;
+        const clickX = ev.clientX + window.scrollX - board.offsetLeft;
         let tile = tiles.find(t => 
             t.position.x <= clickX && 
             t.position.x + t.width >= clickX &&
