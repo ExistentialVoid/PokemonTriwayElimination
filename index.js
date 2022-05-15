@@ -243,8 +243,7 @@ const gameboard = {
     },
     onClick(ev) {
         if (!ev) ev = window.event;
-
-        const panel = document.getElementsByClassName('panel')[0];
+        
         const clickY = ev.clientY + window.scrollY - board.offsetTop;
         const clickX = ev.clientX + window.scrollX - board.offsetLeft;
         let tile = tiles.find(t => 
